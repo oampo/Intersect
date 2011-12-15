@@ -2,7 +2,7 @@ var static = require('node-static');
 var http = require('http');
 var socket = require('socket.io');
 
-var port = 3000;
+var port = 80;
 
 var file = new static.Server('./public');
 
