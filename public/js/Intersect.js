@@ -98,7 +98,7 @@ var Intersect = function() {
     this.canvasCenterX = this.canvasWidth / 2;
     this.canvasCenterY = this.canvasHeight / 2;
 
-    this.socket = io.connect('http://localhost');
+    this.socket = io.connect('http://intersect.no.de');
     this.socket.on('connect', this.onConnect.bind(this));
     this.socket.on('disconnect', this.onDisconnect.bind(this));
     this.socket.on('addPoint', this.onAddPoint.bind(this));
