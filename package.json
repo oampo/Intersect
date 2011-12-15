@@ -1,0 +1,12 @@
+{
+    "name": "intersect",
+    "version": "0.1",
+    "scripts": {
+        "start": "node server.js"
+    },
+    "dependencies": {
+        "node-static": "0.5.9",
+        "socket.io": "0.8.7"
+    }
+}
+
