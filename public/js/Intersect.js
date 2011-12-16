@@ -22,71 +22,40 @@ var PentatonicScale = function() {
 };
 extend(PentatonicScale, Scale);
 
-var KarplusStrong = function(audiolet, frequency) {
-    AudioletNode.call(this, audiolet, 0, 1);
-    this.frequency = frequency;
-    this.lastValue = 0;
-    var sampleRate = this.audiolet.device.sampleRate;
-    this.buffer = new Float32Array(Math.floor(sampleRate / this.frequency));
-    for (var i=0; i<this.buffer.length; i++) {
-        this.buffer[i] = Math.random() * 2 - 1;
-    }
-    this.index = 0;
-};
-extend(KarplusStrong, AudioletNode);
-
-KarplusStrong.prototype.generate = function(inputBuffers, outputBuffers) {
-    var buffer = outputBuffers[0];
-    var channel = buffer.getChannelData(0);
-
-    var delayBuffer = this.buffer;
-    var delayLength = delayBuffer.length;
-    var index = this.index;
-
-    // Processing loop
-    var bufferLength = buffer.length;
-    for (var i = 0; i < bufferLength; i++) {
-        var value = delayBuffer[index];
-        channel[i] = value;
-
-        var newIndex = index + 1;
-        if (newIndex == delayLength) {
-            newIndex = 0;
-        }
-
-        // 0.4975 = 0.995 * 0.5
-        var average = 0.4975 * (value + delayBuffer[newIndex]);
-        delayBuffer[newIndex] = average;
-        index = newIndex;
-    }
-    this.index = index;
-};
-
-
-var Synth = function(audiolet, frequency, pan) {
+var Synth = function(audiolet, frequency, mod) {
     AudioletGroup.call(this, audiolet, 0, 1);
-    var ks = new KarplusStrong(audiolet, frequency);
+    var sine = new Sine(audiolet, frequency);
 
-    var env = new PercussiveEnvelope(audiolet, 1, 0.2, 0.5, function() {
+    var mod = new Sine(audiolet, frequency * 2);
+    var modMulAdd = new MulAdd(audiolet, mod * frequency * 0.9, frequency);
+
+    var env = new PercussiveEnvelope(audiolet, 1, 0.1, 0.5, function() {
         this.audiolet.scheduler.addRelative(0, this.remove.bind(this));
     }.bind(this));
 
-    var mul = new Multiply(audiolet, 1);
+    var mul = new Multiply(audiolet, 0.1);
     var gain = new Gain(audiolet);
 
+    mod.connect(modMulAdd);
+    modMulAdd.connect(sine);
     env.connect(mul);
     mul.connect(gain, 0, 1);
-    ks.connect(gain);
+    sine.connect(gain);
     gain.connect(this.outputs[0]);
 };
 extend(Synth, AudioletGroup);
 
-var Intersect = function() { 
-    this.bpm = 240;
-
+var Intersect = function() {
+    Sink.sinks.dummy.enabled = true;
     this.audiolet = new Audiolet();
+    if (this.audiolet.device.sink instanceof Sink.sinks.dummy) {
+        document.getElementById('no-audio-api-notice').style.display = 'block';
+        return;
+    }
+
+    this.bpm = 240;
     this.audiolet.scheduler.setTempo(this.bpm);
-    this.reverb = new Reverb(this.audiolet);
+    this.reverb = new Reverb(this.audiolet, 0.6, 0.2);
     this.limiter = new Limiter(this.audiolet);
     this.reverb.connect(this.limiter);
     this.limiter.connect(this.audiolet.output);
@@ -131,27 +100,21 @@ var Intersect = function() {
 
     this.color = {h: Math.random(), s: 1, l: 0.5};
 
-    var links = ['about-link', 'tips-link'];
-    for (var i=0; i<links.length; i++) {
-        var link = links[i];
-        var linkElement = document.getElementById(link);
-        linkElement.onmouseover = function() {
-            var name = this.id.split("-link")[0];
-            var infoElement = document.getElementById(name);
-            infoElement.style.display = 'inline';
-        }
-
-        linkElement.onmouseout = function() {
-            var name = this.id.split("-link")[0];
-            var infoElement = document.getElementById(name);
-            infoElement.style.display = 'none';
-        }
+    var linkElement = document.getElementById('about-link');
+    linkElement.onmouseover = function() {
+        var name = this.id.split("-link")[0];
+        var infoElement = document.getElementById(name);
+        infoElement.style.display = 'inline';
     }
 
-    var connectButtons = document.getElementsByClassName("connect");
-    for (var i=0; i<connectButtons.length; i++) {
-        connectButtons[i].onclick = this.retryConnect.bind(this);
+    linkElement.onmouseout = function() {
+        var name = this.id.split("-link")[0];
+        var infoElement = document.getElementById(name);
+        infoElement.style.display = 'none';
     }
+
+    var connectButton = document.getElementById("connect");
+    connectButton.onclick = this.retryConnect.bind(this);
 
     this.connect();
 };
@@ -405,12 +368,12 @@ Intersect.prototype.roundedRect = function(x, y, w, h, r) {
 Intersect.prototype.playNote = function(x, y) {
     var frequency = this.scale.getFrequency(this.gridSize - y - 1,
                                             this.baseFrequency, 3);
-    var pan = x / (this.gridSize - 1);
+    var mod = x / (this.gridSize - 1);
     this.audiolet.scheduler.addAbsolute(this.audiolet.scheduler.beat + 1,
-        function(frequency, pan) {
-            var synth = new Synth(this.audiolet, frequency, pan);
+        function(frequency, mod) {
+            var synth = new Synth(this.audiolet, frequency, mod);
             synth.connect(this.reverb);
-        }.bind(this, frequency, pan)
+        }.bind(this, frequency, mod)
     );
 };
 
