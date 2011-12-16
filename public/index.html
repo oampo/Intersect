@@ -5,9 +5,11 @@
         <title>Intersect</title>
         <script src="js/Audiolet.js"></script>
         <script src="js/raphael.js"></script>
+        <script src="js/spin.js"></script>
         <script src="js/Intersect.js"></script>
         <script src="/socket.io/socket.io.js"></script>
 
+        <link rel="stylesheet" href="fonts/museo-sans/stylesheet.css" />
         <link rel="stylesheet" href="css/960/reset.css" />
         <link rel="stylesheet" href="css/960/text.css" />
         <link rel="stylesheet" href="css/960/960.css" />
@@ -16,20 +18,42 @@
     <body>
         <div id="wrapper">
             <div id="notepad">
-                <canvas id="canvas" width="450" height="450"></canvas>
+                <div id="connecting-notice" class="notice" style="display: none">
+                    <h2>CONNECTING</h2>
+                    <div id="connecting-spinner" class="spinner"></div>
+                </div>
+                <div id="no-audio-api-notice" class="notice" style="display: none">
+                    <h2>AUDIO UNAVAILABLE</h2>
+                </div>
+                <div id="disconnected-notice" class="notice" style="display: none">
+                    <h2>DISCONNECTED</h2>
+                    <p>The connection to the Intersect server has been lost.  Attempting to reconnect.</p>
+                    <div id="reconnecting-spinner" class="spinner"></div>
+                </div>
+                <div id="connect-failed-notice" class="notice" style="display: none">
+                    <h2>CONNECTION FAILED</h2>
+                    <p>Could not connect to the Intersect server.</p>
+                    <button type="button" class="connect">Retry</button>
+                </div>
+                <canvas id="canvas" width="450" height="450" style="display: none"></canvas>
             </div>
             <div id="push"></div>
         </div>
         <div id="footer">
-            <div id="about" style="display: none">
-                <div class="center"><strong>ABOUT INTERSECT</strong></div>
+            <div style="float:left">
+                <span id="user-count">0</span> ACTIVE USERS
             </div>
-            <div id="tips" style="display: none">
-                <div class="center"><strong>TIPS</strong></div>
-            </div>
+            <div style="float:right">
+                <div id="about" style="display: none">
+                    <div class="center"><strong>ABOUT INTERSECT</strong></div>
+                </div>
+                <div id="tips" style="display: none">
+                    <div class="center"><strong>TIPS</strong></div>
+                </div>
 
-            <div>
-                INTERSECT IS A MULTI-USER AUDIO SEQUENCER BY <a href="http://www.oampo.co.uk">O<span class="amp">&amp;</span>O</a> | <a href="https://www.github.com/oampo/Intersect/">GITHUB</a> | <a href="#" id="about-link">ABOUT</a> | <a href="#" id="tips-link">TIPS</a>
+                <div>
+                    INTERSECT IS A MULTI-USER AUDIO SEQUENCER BY <a href="http://www.oampo.co.uk">O<span class="amp">&amp;</span>O</a> | <a href="https://www.github.com/oampo/Intersect/">GITHUB</a> | <a href="#" id="about-link">ABOUT</a> | <a href="#" id="tips-link">TIPS</a>
+                </div>
             </div>
         </div>
     </body>

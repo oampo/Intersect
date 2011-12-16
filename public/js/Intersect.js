@@ -98,10 +98,13 @@ var Intersect = function() {
     this.canvasCenterX = this.canvasWidth / 2;
     this.canvasCenterY = this.canvasHeight / 2;
 
-    this.socket = io.connect('http://intersect.no.de');
-    this.socket.on('connect', this.onConnect.bind(this));
-    this.socket.on('disconnect', this.onDisconnect.bind(this));
-    this.socket.on('addPoint', this.onAddPoint.bind(this));
+    this.running = false;
+
+    this.spinner = new Spinner({
+        length: 36,
+        radius: 20,
+        color: Colors.white
+    });
 
     this.gridSize = 16;
     this.gridDiagonal = Math.ceil(Math.sqrt(2 * Math.pow(this.gridSize, 2)));
@@ -144,15 +147,78 @@ var Intersect = function() {
             infoElement.style.display = 'none';
         }
     }
+
+    var connectButtons = document.getElementsByClassName("connect");
+    for (var i=0; i<connectButtons.length; i++) {
+        connectButtons[i].onclick = this.retryConnect.bind(this);
+    }
+
+    this.connect();
 };
 
+Intersect.prototype.connect = function() {
+    document.getElementById('disconnected-notice').style.display = 'none';
+    document.getElementById('connect-failed-notice').style.display = 'none';
+    document.getElementById('connecting-notice').style.display = 'block';
+    this.canvas.style.display = 'none';
+
+    this.spinner.spin(document.getElementById('connecting-spinner'));
+
+    this.socket = io.connect('http://localhost');//intersect.no.de');
+    this.socket.on('connect', this.onConnect.bind(this));
+    this.socket.on('connect_failed', this.onConnectFailed.bind(this));
+    this.socket.on('error', this.onConnectFailed.bind(this));
+    this.socket.on('disconnect', this.onDisconnect.bind(this));
+    this.socket.on('reconnect_failed', this.onConnectFailed.bind(this));
+    this.socket.on('userCount', this.onUserCount.bind(this));
+    this.socket.on('addPoint', this.onAddPoint.bind(this));
+};
+
+Intersect.prototype.retryConnect = function() {
+    document.getElementById('disconnected-notice').style.display = 'none';
+    document.getElementById('connect-failed-notice').style.display = 'none';
+    document.getElementById('connecting-notice').style.display = 'block';
+    this.canvas.style.display = 'none';
+
+    this.spinner.spin(document.getElementById('connecting-spinner')); 
+
+    this.socket.socket.connect();
+};
+
+
 Intersect.prototype.onConnect = function(data) {
-    this.canvas.onmousedown = this.onMouseDown.bind(this);
-    setInterval(this.update.bind(this), 60000 / this.bpm);
-    requestAnimationFrame(this.draw.bind(this));
+    document.getElementById('connecting-notice').style.display = 'none';
+    document.getElementById('disconnected-notice').style.display = 'none';
+    document.getElementById('connect-failed-notice').style.display = 'none';
+    this.canvas.style.display = 'block';
+
+    this.spinner.stop();
+
+    this.start();
 };
 
 Intersect.prototype.onDisconnect = function(data) {
+    document.getElementById('connecting-notice').style.display = 'none';
+    document.getElementById('disconnected-notice').style.display = 'block';
+    document.getElementById('connect-failed-notice').style.display = 'none';
+    this.canvas.style.display = 'none';
+
+    this.spinner.spin(document.getElementById('reconnecting-spinner'));
+
+    this.stop();
+};
+
+Intersect.prototype.onConnectFailed = function(data) {
+    document.getElementById('connecting-notice').style.display = 'none';
+    document.getElementById('disconnected-notice').style.display = 'none';
+    document.getElementById('connect-failed-notice').style.display = 'block';
+    this.canvas.style.display = 'none';
+
+    this.spinner.stop();
+};
+
+Intersect.prototype.onUserCount = function(data) {
+    this.updateUserCount(data.count);
 };
 
 Intersect.prototype.onAddPoint = function(data) {
@@ -198,6 +264,19 @@ Intersect.prototype.onMouseDown = function(event) {
     this.addPoint(Math.floor(left * this.gridSize / this.width),
                   Math.floor(top * this.gridSize / this.height),
                   {h: this.color.h, s: this.color.s, l: this.color.l}, true);
+};
+
+Intersect.prototype.start = function() {
+    this.running = true;
+    this.canvas.onmousedown = this.onMouseDown.bind(this);
+    this.interval = setInterval(this.update.bind(this), 60000 / this.bpm);
+    requestAnimationFrame(this.draw.bind(this));
+};
+
+Intersect.prototype.stop = function() {
+    this.running = false;
+    this.canvas.onmousedown = null;
+    clearInterval(this.interval);
 };
 
 Intersect.prototype.update = function() {
@@ -273,7 +352,9 @@ Intersect.prototype.draw = function() {
             this.context.stroke();
         }
     }
-    requestAnimationFrame(this.draw.bind(this));
+    if (this.running) {
+        requestAnimationFrame(this.draw.bind(this));
+    }
 };
 
 Intersect.prototype.setOn = function(i, j, color) {
@@ -331,6 +412,11 @@ Intersect.prototype.playNote = function(x, y) {
             synth.connect(this.reverb);
         }.bind(this, frequency, pan)
     );
+};
+
+Intersect.prototype.updateUserCount = function(count) {
+    var span = document.getElementById('user-count');
+    span.innerHTML = count;
 };
 
 window.onload = function() {

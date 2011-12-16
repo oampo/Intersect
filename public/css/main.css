@@ -66,6 +66,22 @@ div#about, div#tips {
     border-right: 0;
 }
 
+div.spinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+}
+
+div.notice {
+    font-family: 'MuseoSans500';
+    padding: 20px;
+    text-align: center;
+}
+
+div.notice h2 {
+    font-size: 36px;
+};
+
 .center {
     text-align: center;
 }
